@@ -28,6 +28,8 @@ export const formatSummary = (data: SectionData): string => {
     section("Session Goal", data.sessionGoal),
     section("Files And Changes", data.filesAndChanges),
     section("Commits", data.commits),
+    section("References", data.references),
+    section("Key Signals", data.keySignals),
     section("Outstanding Context", data.outstandingContext),
     section("User Preferences", data.userPreferences),
   ].filter(Boolean);

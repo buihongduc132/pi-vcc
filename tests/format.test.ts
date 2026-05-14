@@ -7,6 +7,8 @@ const empty: SectionData = {
   outstandingContext: [],
   filesAndChanges: [],
   commits: [],
+  references: [],
+  keySignals: [],
   userPreferences: [],
   briefTranscript: "",
   transcriptEntries: [],
@@ -58,5 +60,32 @@ describe("formatSummary", () => {
     expect(r).toContain("[Session Goal]");
     expect(r).toContain("[Outstanding Context]");
     expect(r).toContain("\n\n");
+  });
+
+  it("renders References section after Commits", () => {
+    const data = {
+      ...empty,
+      commits: ["abc1234: fix bug"],
+      references: ["URL: https://example.com", "GitHub: #42"],
+    };
+    const r = formatSummary(data);
+    expect(r).toContain("[Commits]");
+    expect(r).toContain("[References]");
+    expect(r).toContain("- URL: https://example.com");
+    expect(r).toContain("- GitHub: #42");
+    // References should appear after Commits in output
+    const commitsIdx = r.indexOf("[Commits]");
+    const refsIdx = r.indexOf("[References]");
+    expect(refsIdx).toBeGreaterThan(commitsIdx);
+  });
+
+  it("skips References section when empty", () => {
+    const data = {
+      ...empty,
+      sessionGoal: ["goal"],
+      references: [],
+    };
+    const r = formatSummary(data);
+    expect(r).not.toContain("[References]");
   });
 });

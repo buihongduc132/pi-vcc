@@ -5,10 +5,14 @@ import { extractGoals } from "../extract/goals";
 import { extractFiles } from "../extract/files";
 import { extractPreferences, dedupPreferencesAgainstGoals } from "../extract/preferences";
 import { extractCommits, formatCommits } from "../extract/commits";
+import { extractReferences, formatReferences } from "../extract/references";
+import { extractSignals, formatSignals } from "../extract/signals";
+import type { ExtractionConfig } from "./settings";
 import { buildBriefSections, sectionsToTranscript, stringifyBrief } from "./brief";
 
 export interface BuildSectionsInput {
   blocks: NormalizedBlock[];
+  extraction?: ExtractionConfig;
 }
 
 const BLOCKER_RE =
@@ -60,7 +64,9 @@ const formatFileActivity = (blocks: NormalizedBlock[]): string[] => {
 };
 
 export const buildSections = (input: BuildSectionsInput): SectionData => {
-  const { blocks } = input;
+  const { blocks, extraction } = input;
+  const refOpts = extraction?.references;
+  const sigOpts = extraction?.keySignals;
   const briefSections = buildBriefSections(blocks);
   const sessionGoal = extractGoals(blocks);
   const userPreferences = dedupPreferencesAgainstGoals(
@@ -72,6 +78,8 @@ export const buildSections = (input: BuildSectionsInput): SectionData => {
     outstandingContext: extractOutstandingContext(blocks),
     filesAndChanges: formatFileActivity(blocks),
     commits: formatCommits(extractCommits(blocks)),
+    references: formatReferences(extractReferences(blocks, refOpts)),
+    keySignals: formatSignals(extractSignals(blocks, sigOpts)),
     userPreferences,
     briefTranscript: stringifyBrief(briefSections),
     transcriptEntries: sectionsToTranscript(briefSections),

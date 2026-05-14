@@ -8,6 +8,7 @@ describe("buildSections", () => {
     expect(r.sessionGoal).toEqual([]);
     expect(r.outstandingContext).toEqual([]);
     expect(r.briefTranscript).toBe("");
+    expect(r.references).toEqual([]);
   });
 
   it("populates sections from realistic blocks", () => {
@@ -55,5 +56,35 @@ describe("buildSections", () => {
     const r = buildSections({ blocks });
     const matches = r.briefTranscript.match(/\[assistant\]/g);
     expect(matches?.length).toBe(1);
+  });
+
+  // ── References integration ──
+
+  it("populates references from user blocks with URLs", () => {
+    const blocks: NormalizedBlock[] = [
+      { kind: "user", text: "Check https://docs.example.com/api for the API docs" },
+    ];
+    const r = buildSections({ blocks });
+    expect(r.references.length).toBeGreaterThan(0);
+    expect(r.references[0]).toContain("URL:");
+    expect(r.references[0]).toContain("https://docs.example.com/api");
+  });
+
+  it("populates references with GitHub refs", () => {
+    const blocks: NormalizedBlock[] = [
+      { kind: "user", text: "Fix issue #42 and merge PR #7" },
+    ];
+    const r = buildSections({ blocks });
+    expect(r.references.some(ref => ref.includes("#42"))).toBe(true);
+    expect(r.references.some(ref => ref.includes("PR #7"))).toBe(true);
+  });
+
+  it("returns empty references when no user/assistant blocks have refs", () => {
+    const blocks: NormalizedBlock[] = [
+      { kind: "user", text: "Fix the auth bug" },
+      { kind: "tool_result", name: "bash", text: "https://example.com in output", isError: false },
+    ];
+    const r = buildSections({ blocks });
+    expect(r.references).toEqual([]);
   });
 });
