@@ -4,6 +4,7 @@ import { normalize } from "./normalize";
 import { filterNoise } from "./filter-noise";
 import { buildSections } from "./build-sections";
 import { formatSummary, capBrief, RECALL_NOTE } from "./format";
+import { loadSettings, type ExtractionConfig } from "./settings";
 
 export interface CompileInput {
   messages: Message[];
@@ -136,7 +137,8 @@ const mergePrevious = (prev: string, fresh: string): string => {
 
 export const compile = (input: CompileInput): string => {
   const blocks = filterNoise(normalize(input.messages));
-  const data = buildSections({ blocks });
+  const settings = loadSettings();
+  const data = buildSections({ blocks, extraction: settings.extraction });
   const fresh = formatSummary(data);
   // Strip any legacy RECALL_NOTE baked into prev summary (pre-fix format)
   // so merge doesn't re-stack it inside the brief.
