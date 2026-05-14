@@ -5,6 +5,8 @@ import { extractGoals } from "../extract/goals";
 import { extractFiles } from "../extract/files";
 import { extractPreferences, dedupPreferencesAgainstGoals } from "../extract/preferences";
 import { extractCommits, formatCommits } from "../extract/commits";
+import { extractReferences, formatReferences } from "../extract/references";
+import { extractSignals, formatSignals } from "../extract/signals";
 import { buildBriefSections, sectionsToTranscript, stringifyBrief } from "./brief";
 
 export interface BuildSectionsInput {
@@ -72,6 +74,8 @@ export const buildSections = (input: BuildSectionsInput): SectionData => {
     outstandingContext: extractOutstandingContext(blocks),
     filesAndChanges: formatFileActivity(blocks),
     commits: formatCommits(extractCommits(blocks)),
+    references: formatReferences(extractReferences(blocks)),
+    keySignals: formatSignals(extractSignals(blocks)),
     userPreferences,
     briefTranscript: stringifyBrief(briefSections),
     transcriptEntries: sectionsToTranscript(briefSections),

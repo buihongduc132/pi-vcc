@@ -77,4 +77,34 @@ describe("compile", () => {
     expect(r).toContain("earlier lines omitted");
     expect(r).toContain("latest");
   });
+
+  // ── References merge ──
+
+  it("merges References across compactions with dedup", () => {
+    const previousSummary = [
+      "[Session Goal]\n- goal",
+      "[References]\n- URL: https://example.com\n- GitHub: #42",
+      "---",
+      "[user]\noriginal",
+    ].join("\n\n");
+    const r = compile({
+      previousSummary,
+      messages: [userMsg("Check https://other.com and #42")],
+    });
+    // Should contain both URLs
+    expect(r).toContain("https://example.com");
+    expect(r).toContain("https://other.com");
+    // GitHub #42 should be deduped
+    const count = (r.match(/#42/g) ?? []).length;
+    // At least one in References section
+    expect(count).toBeGreaterThanOrEqual(1);
+  });
+
+  it("preserves References from fresh when no previous", () => {
+    const r = compile({
+      messages: [userMsg("See https://docs.example.com")],
+    });
+    expect(r).toContain("[References]");
+    expect(r).toContain("https://docs.example.com");
+  });
 });

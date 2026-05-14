@@ -11,7 +11,7 @@ export interface CompileInput {
   fileOps?: FileOps;
 }
 
-const HEADER_NAMES = ["Session Goal", "Files And Changes", "Commits", "Outstanding Context", "User Preferences"];
+const HEADER_NAMES = ["Session Goal", "Files And Changes", "Commits", "References", "Key Signals", "Outstanding Context", "User Preferences"];
 
 const SEPARATOR = "\n\n---\n\n";
 
