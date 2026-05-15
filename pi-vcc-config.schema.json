@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/buihongduc132/pi-vcc/pi-vcc-config.schema.json",
+  "title": "pi-vcc Configuration",
+  "description": "Configuration for pi-vcc algorithmic conversation compactor",
+  "type": "object",
+  "properties": {
+    "overrideDefaultCompaction": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, pi-vcc handles ALL compactions (/compact, auto-threshold, /pi-vcc). When false, only /pi-vcc triggers pi-vcc; everything else falls back to pi core's LLM-based compaction."
+    },
+    "debug": {
+      "type": "boolean",
+      "default": false,
+      "description": "Write debug snapshot to /tmp/pi-vcc-debug.json on each compaction."
+    },
+    "extraction": {
+      "$ref": "#/$defs/extraction"
+    }
+  },
+  "$defs": {
+    "extraction": {
+      "type": "object",
+      "description": "Fine-grained extraction configuration. All extra* patterns are ADDITIVE — built-in patterns are never removed.",
+      "properties": {
+        "references": {
+          "$ref": "#/$defs/references"
+        },
+        "keySignals": {
+          "$ref": "#/$defs/keySignals"
+        },
+        "goals": {
+          "$ref": "#/$defs/goals"
+        }
+      },
+      "additionalProperties": false
+    },
+    "references": {
+      "type": "object",
+      "description": "References extractor: URLs, GitHub refs, versions, branches, commit refs. Output appears as [References] section.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When false, skip this extraction entirely."
+        },
+        "extraUrlPatterns": {
+          "type": "array",
+          "items": { "type": "string", "format": "regex" },
+          "default": [],
+          "description": "Additional URL regex patterns (appended to built-in https?://\\S+). Each pattern is compiled with global flag. Capture group 1 or full match is used."
+        },
+        "extraGithubRefPatterns": {
+          "type": "array",
+          "items": { "type": "string", "format": "regex" },
+          "default": [],
+          "description": "Additional GitHub ref patterns (appended to built-in #\\d+, PR\\s*#\\d+, owner/repo). Full match is used."
+        },
+        "extraVersionPatterns": {
+          "type": "array",
+          "items": { "type": "string", "format": "regex" },
+          "default": [],
+          "description": "Additional version patterns (appended to built-in v?\\d+\\.\\d+\\.\\d+). Capture group 1 or full match is used."
+        },
+        "extraBranchPatterns": {
+          "type": "array",
+          "items": { "type": "string", "format": "regex" },
+          "default": [],
+          "description": "Additional branch patterns (appended to built-in feat|fix|hotfix|release|.../xxx). Full match is used."
+        }
+      },
+      "additionalProperties": false
+    },
+    "keySignals": {
+      "type": "object",
+      "description": "Key Signals extractor: constraints, decisions, status markers. Output appears as [Key Signals] section.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When false, skip this extraction entirely."
+        },
+        "extraConstraintPatterns": {
+          "type": "array",
+          "items": { "type": "string", "format": "regex" },
+          "default": [],
+          "description": "Additional constraint patterns (appended to built-in don't|must not|cannot|forbidden|disallowed|off-limits|out of scope|excluded|do not). Applied to user messages only."
+        },
+        "extraDecisionPatterns": {
+          "type": "array",
+          "items": { "type": "string", "format": "regex" },
+          "default": [],
+          "description": "Additional decision patterns (appended to built-in decided|let's use|going with|chose|we'll use). Applied to user messages only."
+        },
+        "extraStatusPatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional status keywords (appended to built-in DONE|TODO|WIP|blocked|resolved). Keywords are matched at sentence start or after punctuation. Applied to user + assistant messages."
+        }
+      },
+      "additionalProperties": false
+    },
+    "goals": {
+      "type": "object",
+      "description": "Goals extractor tweaks. Controls session goal and scope-change detection.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When false, skip goals extraction entirely (only affects [Session Goal] section)."
+        },
+        "extraTaskVerbs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional task verbs (appended to built-in fix|implement|add|create|build|refactor|...). Used to detect new task statements in user messages."
+        },
+        "extraScopeChangeWords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional scope-change keywords (appended to built-in instead|actually|change of plan|...). Used to detect when user pivots to a new goal."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
