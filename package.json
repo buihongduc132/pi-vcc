@@ -14,6 +14,11 @@
     "type": "git",
     "url": "git+https://github.com/sting8k/pi-vcc.git"
   },
+  "scripts": {
+    "test": "vitest run",
+    "syntax-check": "node $(git rev-parse --show-toplevel)/.mise/plugins/deploy/scripts/compile-extensions.js --check-only --single .",
+    "prepublishOnly": "npm run syntax-check"
+  },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",
     "@sinclair/typebox": "*"

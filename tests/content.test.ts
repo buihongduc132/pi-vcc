@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { textParts, textOf, clip, firstLine } from "../src/core/content";
 
 describe("textParts", () => {

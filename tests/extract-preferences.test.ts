@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { extractPreferences } from "../src/extract/preferences";
 import type { NormalizedBlock } from "../src/types";
 

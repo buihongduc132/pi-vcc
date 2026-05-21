@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { normalizeRecallScope, parseRecallScope } from "../src/core/recall-scope";
 
 describe("normalizeRecallScope", () => {

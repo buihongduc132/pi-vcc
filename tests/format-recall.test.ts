@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { formatRecallOutput } from "../src/core/format-recall";
 import type { RenderedEntry } from "../src/core/render-entries";
 

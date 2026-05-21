@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { buildSections } from "../src/core/build-sections";
 import type { NormalizedBlock } from "../src/types";
 

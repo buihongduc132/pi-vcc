@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "vitest";
 import { buildCompactReport } from "../src/core/report";
 import { prepareSessionSamples, readSourceStat, type SessionSample } from "./support/real-sessions";
 import { loadSessionMessages } from "./support/load-session";

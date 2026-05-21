@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { searchEntries } from "../src/core/search-entries";
 import type { RenderedEntry } from "../src/core/render-entries";
 import type { Message } from "@mariozechner/pi-ai";

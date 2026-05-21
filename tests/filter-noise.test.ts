@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { filterNoise } from "../src/core/filter-noise";
 import type { NormalizedBlock } from "../src/types";
 

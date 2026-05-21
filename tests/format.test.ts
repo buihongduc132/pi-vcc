@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { formatSummary } from "../src/core/format";
 import type { SectionData } from "../src/sections";
 

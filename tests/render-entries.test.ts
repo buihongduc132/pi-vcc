@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { renderMessage } from "../src/core/render-entries";
 import type { Message } from "@mariozechner/pi-ai";
 import { userMsg, assistantText, assistantWithToolCall, toolResult } from "./fixtures";
@@ -28,7 +28,7 @@ describe("renderMessage", () => {
 
   it("renders error tool result with prefix", () => {
     const r = renderMessage(toolResult("bash", "not found", true), 3);
-    expect(r.summary).toStartWith("ERROR");
+    expect(r.summary.startsWith("ERROR")).toBe(true);
   });
 
   it("truncates long user text", () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { extractReferences, formatReferences } from "../src/extract/references";
 import { extractSignals, formatSignals } from "../src/extract/signals";
 import { compile } from "../src/core/summarize";

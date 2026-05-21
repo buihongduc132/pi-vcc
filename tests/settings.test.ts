@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { DEFAULT_SETTINGS, loadSettings } from "../src/core/settings";
 
 describe("settings", () => {

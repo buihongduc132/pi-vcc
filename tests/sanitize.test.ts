@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { sanitize } from "../src/core/sanitize";
 
 describe("sanitize", () => {
