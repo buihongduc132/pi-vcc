@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { readFile, writeFile } from "fs/promises";
 import { homedir } from "os";
 import { dirname, join } from "path";
 
@@ -93,10 +94,11 @@ export const DEFAULT_SETTINGS: PiVccSettings = {
   extraction: DEFAULT_EXTRACTION,
 };
 
-const readJson = (path: string): Record<string, unknown> | null => {
+const readJson = async (path: string): Promise<Record<string, unknown> | null> => {
   try {
-    return JSON.parse(readFileSync(path, "utf-8"));
-  } catch {
+    return JSON.parse(await readFile(path, "utf-8"));
+  } catch (e) {
+    // Intentional fallback: if the file doesn't exist or is invalid JSON, treat as empty.
     return null;
   }
 };
@@ -127,8 +129,8 @@ function deepMergeExtraction(parsed: Record<string, unknown>): ExtractionConfig 
   };
 }
 
-export function loadSettings(): PiVccSettings {
-  const parsed = readJson(settingsPath());
+export async function loadSettings(): Promise<PiVccSettings> {
+  const parsed = await readJson(settingsPath());
   if (!parsed || typeof parsed !== "object") return { ...DEFAULT_SETTINGS };
   const { extraction: _, ...topLevel } = { ...DEFAULT_SETTINGS, ...(parsed as Partial<PiVccSettings>) };
   const extraction = deepMergeExtraction(parsed);
@@ -152,7 +154,7 @@ export function scaffoldSettings(): void {
       return;
     }
 
-    const parsed = readJson(path);
+    const parsed = JSON.parse(readFileSync(path, "utf-8"));
     if (!parsed || typeof parsed !== "object") return; // don't clobber
 
     let changed = false;
@@ -164,7 +166,7 @@ export function scaffoldSettings(): void {
       }
     }
     if (changed) writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
-  } catch {
-    // best-effort; never crash extension load
+  } catch (e) {
+    // Intentional fallback: settings scaffolding is best-effort and should not crash the extension load.
   }
 }

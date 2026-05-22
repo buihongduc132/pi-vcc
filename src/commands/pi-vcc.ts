@@ -1,10 +1,7 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { getLastCompactionStats, PI_VCC_COMPACT_INSTRUCTION } from "../hooks/before-compact";
 
-const formatTokens = (n: number): string => {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
-};
+import { formatTokens } from "../core/format";
 
 export const registerPiVccCommand = (pi: ExtensionAPI) => {
   pi.registerCommand("pi-vcc", {

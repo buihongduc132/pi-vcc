@@ -25,7 +25,7 @@ export const registerVccRecallCommand = (pi: ExtensionAPI) => {
         : undefined;
       if (!parsed.text) {
         // No query: show recent
-        const { rendered } = loadAllMessages(sessionFile, false, lineageEntryIds);
+        const { rendered } = await loadAllMessages(sessionFile, false, lineageEntryIds);
         const recent = rendered.slice(-DEFAULT_RECENT);
         const output = (parsed.scope === "all" ? "Scope: all\n\n" : "") + formatRecallOutput(recent);
         pi.sendMessage({ customType: "vcc-recall", content: output, display: true }, { triggerTurn: true });
@@ -38,14 +38,14 @@ export const registerVccRecallCommand = (pi: ExtensionAPI) => {
       const query = parsed.text.replace(/\bpage:\d+\b/i, "").trim();
 
       if (!query) {
-        const { rendered } = loadAllMessages(sessionFile, false, lineageEntryIds);
+        const { rendered } = await loadAllMessages(sessionFile, false, lineageEntryIds);
         const recent = rendered.slice(-DEFAULT_RECENT);
         const output = (parsed.scope === "all" ? "Scope: all\n\n" : "") + formatRecallOutput(recent);
         pi.sendMessage({ customType: "vcc-recall", content: output, display: true }, { triggerTurn: true });
         return;
       }
 
-      const { rendered, rawMessages } = loadAllMessages(sessionFile, false, lineageEntryIds);
+      const { rendered, rawMessages } = await loadAllMessages(sessionFile, false, lineageEntryIds);
       const allResults = searchEntries(rendered, rawMessages, query);
 
       const start = (page - 1) * PAGE_SIZE;

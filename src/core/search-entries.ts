@@ -2,6 +2,15 @@ import type { Message } from "@mariozechner/pi-ai";
 import type { RenderedEntry } from "./render-entries";
 import { textOf } from "./content";
 
+interface BashExecutionMessage {
+  role: "bashExecution";
+  command?: string;
+  output?: string;
+}
+function isBashExec(m: Message | BashExecutionMessage): m is BashExecutionMessage {
+  return typeof m === "object" && m !== null && (m as unknown as Record<string, unknown>).role === "bashExecution";
+}
+
 export interface SearchHit extends RenderedEntry {
   /** Context snippet around the first matched term (only when query provided) */
   snippet?: string;
@@ -148,9 +157,9 @@ const lineSnippet = (text: string, regex: RegExp, contextLines = 2): string | un
 };
 
 /** Build full searchable text for a message. */
-const fullText = (msg: Message): string => {
-  if ((msg as any).role === "bashExecution") {
-    return `${(msg as any).command ?? ""} ${(msg as any).output ?? ""}`;
+const fullText = (msg: Message | BashExecutionMessage): string => {
+  if (isBashExec(msg)) {
+    return `${msg.command ?? ""} ${msg.output ?? ""}`;
   }
   return textOf(msg.content);
 };

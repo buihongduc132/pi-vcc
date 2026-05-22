@@ -49,3 +49,8 @@ export const formatSummary = (data: SectionData): string => {
   // to avoid the note compounding inside the brief transcript across compactions.
   return parts.join("\n\n---\n\n");
 };
+
+export const formatTokens = (n: number): string => {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+};

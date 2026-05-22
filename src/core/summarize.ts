@@ -135,9 +135,9 @@ const mergePrevious = (prev: string, fresh: string): string => {
   return parts.join(SEPARATOR);
 };
 
-export const compile = (input: CompileInput): string => {
+export const compile = async (input: CompileInput): Promise<string> => {
   const blocks = filterNoise(normalize(input.messages));
-  const settings = loadSettings();
+  const settings = await loadSettings();
   const data = buildSections({ blocks, extraction: settings.extraction });
   const fresh = formatSummary(data);
   // Strip any legacy RECALL_NOTE baked into prev summary (pre-fix format)

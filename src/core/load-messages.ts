@@ -1,24 +1,46 @@
-import { readFileSync } from "fs";
+import { readFile } from "fs/promises";
 import type { Message } from "@mariozechner/pi-ai";
 import { renderMessage, type RenderedEntry } from "./render-entries";
+
+export interface ParseFailure {
+  line: number;
+  error: string;
+  preview: string;
+}
 
 export interface LoadedMessages {
   rendered: RenderedEntry[];
   rawMessages: Message[];
   entryIds: string[];
+  parseFailures: ParseFailure[];
 }
 
-export const loadAllMessages = (
+export const loadAllMessages = async (
   sessionFile: string,
   full: boolean,
   allowedEntryIds?: Set<string>,
-): LoadedMessages => {
-  const content = readFileSync(sessionFile, "utf-8");
+): Promise<LoadedMessages> => {
+  const content = await readFile(sessionFile, "utf-8");
   const entries: any[] = [];
+  const parseFailures: ParseFailure[] = [];
+  let lineNum = 0;
   for (const line of content.split("\n")) {
+    lineNum++;
     if (!line.trim()) continue;
-    try { entries.push(JSON.parse(line)); } catch {}
+    try {
+      entries.push(JSON.parse(line));
+    } catch (e) {
+      parseFailures.push({ line: lineNum, error: (e as Error).message, preview: line.slice(0, 80) });
+    }
   }
+
+  if (parseFailures.length > 0) {
+    console.warn(`[pi-vcc] Found ${parseFailures.length} JSONL parsing failures in ${sessionFile}:`);
+    for (const failure of parseFailures) {
+      console.warn(`  - Line ${failure.line}: ${failure.error} (starts with: "${failure.preview}...")`);
+    }
+  }
+
   const rendered: RenderedEntry[] = [];
   const rawMessages: Message[] = [];
   const entryIds: string[] = [];
@@ -37,5 +59,5 @@ export const loadAllMessages = (
     messageIndex++;
   }
 
-  return { rendered, rawMessages, entryIds };
+  return { rendered, rawMessages, entryIds, parseFailures };
 };
