@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { readFile, writeFile } from "fs/promises";
+import { readFile, writeFile, mkdir } from "fs/promises";
 import { homedir } from "os";
 import { dirname, join } from "path";
 
@@ -143,6 +143,9 @@ export async function loadSettings(): Promise<PiVccSettings> {
  * - File exists but invalid JSON → no-op (don't clobber user file).
  * - File exists and valid → fill in missing default keys, preserve existing values.
  */
+/**
+ * @deprecated Use scaffoldSettingsAsync() instead — sync fs blocks the event loop in extension hooks.
+ */
 export function scaffoldSettings(): void {
   try {
     const path = settingsPath();
@@ -166,6 +169,46 @@ export function scaffoldSettings(): void {
       }
     }
     if (changed) writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
+  } catch (e) {
+    // Intentional fallback: settings scaffolding is best-effort and should not crash the extension load.
+  }
+}
+
+/**
+ * Async version of scaffoldSettings(). Uses fs/promises to avoid blocking the event loop.
+ * - File missing → create with full default block.
+ * - File exists but invalid JSON → no-op (don't clobber user file).
+ * - File exists and valid → fill in missing default keys, preserve existing values.
+ */
+export async function scaffoldSettingsAsync(): Promise<void> {
+  try {
+    const path = settingsPath();
+    const dir = dirname(path);
+
+    let data: string;
+    try {
+      data = await readFile(path, "utf-8");
+    } catch (e: unknown) {
+      if (e instanceof Error && (e as NodeJS.ErrnoException).code === "ENOENT") {
+        // File doesn't exist → create parent dir + default config
+        await mkdir(dir, { recursive: true });
+        await writeFile(path, `${JSON.stringify(DEFAULT_SETTINGS, null, 2)}\n`);
+      }
+      return;
+    }
+
+    const parsed = JSON.parse(data);
+    if (!parsed || typeof parsed !== "object") return; // don't clobber
+
+    let changed = false;
+    const next: Record<string, unknown> = { ...parsed };
+    for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+      if (!(key in next)) {
+        next[key] = value;
+        changed = true;
+      }
+    }
+    if (changed) await writeFile(path, `${JSON.stringify(next, null, 2)}\n`);
   } catch (e) {
     // Intentional fallback: settings scaffolding is best-effort and should not crash the extension load.
   }
