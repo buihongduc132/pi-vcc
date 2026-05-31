@@ -18,8 +18,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "syntax-check": "node $(git rev-parse --show-toplevel)/.mise/plugins/deploy/scripts/compile-extensions.js --check-only --single .",
-    "prepublishOnly": "npm run syntax-check"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",
