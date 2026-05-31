@@ -21,8 +21,8 @@ describe("settings", () => {
     expect(DEFAULT_SETTINGS.extraction.goals.extraScopeChangeWords).toEqual([]);
   });
 
-  it("loadSettings returns valid config with extraction defaults", () => {
-    const s = loadSettings();
+  it("loadSettings returns valid config with extraction defaults", async () => {
+    const s = await loadSettings();
     // Don't assert on boolean fields that may differ per environment
     expect(s.extraction).toBeDefined();
     expect(s.extraction.references.enabled).toBe(true);

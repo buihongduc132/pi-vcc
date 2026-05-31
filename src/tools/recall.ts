@@ -55,7 +55,7 @@ export const registerRecallTool = (pi: ExtensionAPI) => {
       const hasExpand = expandSet.size > 0;
 
       if (hasExpand && !params.query) {
-        const { rendered: fullMsgs } = loadAllMessages(sessionFile, true, lineageEntryIds);
+        const { rendered: fullMsgs } = await loadAllMessages(sessionFile, true, lineageEntryIds);
         const requested = [...expandSet];
         const byIndex = new Map(fullMsgs.map((m) => [m.index, m]));
         const invalid = invalidExpandIndices(requested, new Set(byIndex.keys()));
@@ -74,7 +74,7 @@ export const registerRecallTool = (pi: ExtensionAPI) => {
         };
       }
 
-      const { rendered: msgs, rawMessages } = loadAllMessages(sessionFile, false, lineageEntryIds);
+      const { rendered: msgs, rawMessages } = await loadAllMessages(sessionFile, false, lineageEntryIds);
       const allResults = params.query?.trim()
         ? searchEntries(msgs, rawMessages, params.query)
         : msgs.slice(-DEFAULT_RECENT);

@@ -6,13 +6,15 @@
   "keywords": [
     "pi-package",
     "pi-extension",
+    "pi",
+    "pi-coding-agent",
     "vcc",
-    "compact",
+    "version-control",
     "compaction"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sting8k/pi-vcc.git"
+    "url": "git+https://github.com/buihongduc132/pi-vcc.git"
   },
   "scripts": {
     "test": "vitest run",
@@ -27,5 +29,8 @@
     "extensions": [
       "./index.ts"
     ]
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }

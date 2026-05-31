@@ -192,14 +192,14 @@ const probesOf = (messages: Message[], summary: string): RecallProbe[] => {
         sourceText,
         query,
         summaryMentioned: matchesQuery(summary, query),
-        recallHits: searchEntries(rendered, query).length,
+        recallHits: searchEntries(rendered, messages, query).length,
       };
     })
     .filter((probe): probe is RecallProbe => probe !== null);
 };
 
-export const buildCompactReport = (input: CompileInput): CompactReport => {
-  const summary = compile(input);
+export const buildCompactReport = async (input: CompileInput): Promise<CompactReport> => {
+  const summary = await compile(input);
   const data = buildSections({ blocks: normalize(input.messages) });
   const inputChars = inputCharsOf(input.messages);
   const topFiles = topFilesOf(input.messages);

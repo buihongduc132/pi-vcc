@@ -306,8 +306,8 @@ describe("full pipeline integration", () => {
     expect(r.keySignals).toEqual([]);
   });
 
-  it("compile produces valid output with new sections", () => {
-    const result = compile({
+  it("compile produces valid output with new sections", async () => {
+    const result = await compile({
       messages: [
         { role: "user", content: "Check https://example.com and fix issue #42. Must not break backward compat." },
         { role: "assistant", content: "DONE — analysis complete" },
@@ -319,13 +319,13 @@ describe("full pipeline integration", () => {
     expect(result).toContain("Constraint:");
   });
 
-  it("compile merges references across compactions", () => {
-    const prev = compile({
+  it("compile merges references across compactions", async () => {
+    const prev = await compile({
       messages: [
         { role: "user", content: "See https://docs.example.com" },
       ],
     });
-    const fresh = compile({
+    const fresh = await compile({
       messages: [
         { role: "user", content: "Also check https://api.example.com/v2" },
       ],
@@ -336,13 +336,13 @@ describe("full pipeline integration", () => {
     expect(fresh).toContain("https://api.example.com/v2");
   });
 
-  it("compile merges key signals across compactions", () => {
-    const prev = compile({
+  it("compile merges key signals across compactions", async () => {
+    const prev = await compile({
       messages: [
         { role: "user", content: "Must not push to main directly" },
       ],
     });
-    const fresh = compile({
+    const fresh = await compile({
       messages: [
         { role: "user", content: "Decided to use Redis for caching" },
       ],
@@ -352,8 +352,8 @@ describe("full pipeline integration", () => {
     expect(fresh).toContain("Decision:");
   });
 
-  it("backwards compat: output identical when new sections empty", () => {
-    const result = compile({
+  it("backwards compat: output identical when new sections empty", async () => {
+    const result = await compile({
       messages: [
         { role: "user", content: "Fix the login bug" },
         { role: "assistant", content: "I'll fix it." },

@@ -8,12 +8,12 @@ import {
 } from "./fixtures";
 
 describe("compile", () => {
-  it("returns empty string for no messages", () => {
-    expect(compile({ messages: [] })).toBe("");
+  it("returns empty string for no messages", async () => {
+    expect(await compile({ messages: [] })).toBe("");
   });
 
-  it("produces hybrid output with header + brief transcript", () => {
-    const r = compile({
+  it("produces hybrid output with header + brief transcript", async () => {
+    const r = await compile({
       messages: [
         userMsg("Fix login bug"),
         assistantWithToolCall("Read", { path: "auth.ts" }),
@@ -28,8 +28,8 @@ describe("compile", () => {
     expect(r).toContain("Found the issue.");
   });
 
-  it("merges previous summary goals", () => {
-    const r = compile({
+  it("merges previous summary goals", async () => {
+    const r = await compile({
       messages: [userMsg("New task")],
       previousSummary: "[Session Goal]\n- Original goal\n\n---\n\n[user]\nOriginal goal",
     });
@@ -37,13 +37,13 @@ describe("compile", () => {
     expect(r).toContain("- New task");
   });
 
-  it("appends brief transcript on merge", () => {
+  it("appends brief transcript on merge", async () => {
     const previousSummary = [
       "[Session Goal]\n- Original goal",
       "---",
       "[user]\nOriginal goal\n\n[assistant]\n* Read \"old.ts\"",
     ].join("\n\n");
-    const r = compile({
+    const r = await compile({
       previousSummary,
       messages: [
         userMsg("Next step"),
@@ -55,22 +55,22 @@ describe("compile", () => {
     expect(r).toContain("Next step");
   });
 
-  it("outstanding context is volatile (fresh only)", () => {
+  it("outstanding context is volatile (fresh only)", async () => {
     const previousSummary = "[Outstanding Context]\n- old blocker\n\n---\n\n[user]\nhi";
-    const r = compile({
+    const r = await compile({
       previousSummary,
       messages: [userMsg("continue")],
     });
     expect(r).not.toContain("old blocker");
   });
 
-  it("caps long brief transcript with rolling window", () => {
+  it("caps long brief transcript with rolling window", async () => {
     // Build a very long previous transcript
     const longTranscript = Array.from({ length: 200 }, (_, i) =>
       `[user]\nmessage ${i}`
     ).join("\n\n");
     const previousSummary = `[Session Goal]\n- goal\n\n---\n\n${longTranscript}`;
-    const r = compile({
+    const r = await compile({
       previousSummary,
       messages: [userMsg("latest")],
     });
@@ -80,14 +80,14 @@ describe("compile", () => {
 
   // ── References merge ──
 
-  it("merges References across compactions with dedup", () => {
+  it("merges References across compactions with dedup", async () => {
     const previousSummary = [
       "[Session Goal]\n- goal",
       "[References]\n- URL: https://example.com\n- GitHub: #42",
       "---",
       "[user]\noriginal",
     ].join("\n\n");
-    const r = compile({
+    const r = await compile({
       previousSummary,
       messages: [userMsg("Check https://other.com and #42")],
     });
@@ -100,8 +100,8 @@ describe("compile", () => {
     expect(count).toBeGreaterThanOrEqual(1);
   });
 
-  it("preserves References from fresh when no previous", () => {
-    const r = compile({
+  it("preserves References from fresh when no previous", async () => {
+    const r = await compile({
       messages: [userMsg("See https://docs.example.com")],
     });
     expect(r).toContain("[References]");

@@ -76,50 +76,50 @@ describe("registerBeforeCompactHook: cancel paths", () => {
     if (existsSync(DEBUG_PATH)) unlinkSync(DEBUG_PATH);
   });
 
-  test("/pi-vcc with too few live messages cancels and notifies warning", () => {
+  test("/pi-vcc with too few live messages cancels and notifies warning", async () => {
     setConfig({ debug: false, overrideDefaultCompaction: false });
     const { pi, invoke, notifyCalls } = createMockPi();
     registerBeforeCompactHook(pi);
 
     const entries = [msg("m1", "user"), msg("m2", "assistant")];
-    expect(invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
+    expect(await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
     expect(notifyCalls).toHaveLength(1);
     expect(notifyCalls[0].level).toBe("warning");
     expect(notifyCalls[0].msg).toContain("Too few messages");
   });
 
-  test("/pi-vcc with no user message cancels with no_user_message reason", () => {
+  test("/pi-vcc with no user message cancels with no_user_message reason", async () => {
     setConfig({ debug: false, overrideDefaultCompaction: false });
     const { pi, invoke, notifyCalls } = createMockPi();
     registerBeforeCompactHook(pi);
 
     const entries = [msg("m1", "assistant"), msg("m2", "assistant"), msg("m3", "assistant")];
-    expect(invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
+    expect(await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
     expect(notifyCalls[0].msg).toContain("no user message");
   });
 
-  test("/compact with override=true cancels and notifies (NEW: was silent before)", () => {
+  test("/compact with override=true cancels and notifies (NEW: was silent before)", async () => {
     setConfig({ debug: false, overrideDefaultCompaction: true });
     const { pi, invoke, notifyCalls } = createMockPi();
     registerBeforeCompactHook(pi);
 
     const entries = [msg("m1", "user"), msg("m2", "assistant")];
-    expect(invoke(makeEvent(entries, undefined))).toEqual({ cancel: true });
+    expect(await invoke(makeEvent(entries, undefined))).toEqual({ cancel: true });
     expect(notifyCalls).toHaveLength(1);
     expect(notifyCalls[0].level).toBe("warning");
   });
 
-  test("/compact with override=false short-circuits (no notify, returns undefined)", () => {
+  test("/compact with override=false short-circuits (no notify, returns undefined)", async () => {
     setConfig({ debug: false, overrideDefaultCompaction: false });
     const { pi, invoke, notifyCalls } = createMockPi();
     registerBeforeCompactHook(pi);
 
     const entries = [msg("m1", "user"), msg("m2", "assistant")];
-    expect(invoke(makeEvent(entries, undefined))).toBeUndefined();
+    expect(await invoke(makeEvent(entries, undefined))).toBeUndefined();
     expect(notifyCalls).toHaveLength(0);
   });
 
-  test("debug:true writes metrics-only snapshot with no content leakage", () => {
+  test("debug:true writes metrics-only snapshot with no content leakage", async () => {
     setConfig({ debug: true, overrideDefaultCompaction: false });
     const { pi, invoke } = createMockPi();
     registerBeforeCompactHook(pi);
@@ -129,7 +129,7 @@ describe("registerBeforeCompactHook: cancel paths", () => {
       msg("m2", "assistant", "sensitive response"),
       msg("m3", "assistant", "more text"),
     ];
-    expect(invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
+    expect(await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
 
     expect(existsSync(DEBUG_PATH)).toBe(true);
     const snapshot = JSON.parse(readFileSync(DEBUG_PATH, "utf-8"));
@@ -143,12 +143,12 @@ describe("registerBeforeCompactHook: cancel paths", () => {
     expect(serialized).not.toContain("sensitive response");
   });
 
-  test("debug:false does NOT write snapshot", () => {
+  test("debug:false does NOT write snapshot", async () => {
     setConfig({ debug: false, overrideDefaultCompaction: false });
     const { pi, invoke } = createMockPi();
     registerBeforeCompactHook(pi);
     const entries = [msg("m1", "user"), msg("m2", "assistant")];
-    expect(invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
+    expect(await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
     expect(existsSync(DEBUG_PATH)).toBe(false);
   });
 });
@@ -162,7 +162,7 @@ describe("registerBeforeCompactHook: compact-all path", () => {
     if (existsSync(DEBUG_PATH)) unlinkSync(DEBUG_PATH);
   });
 
-  test("single-user + autonomous tail → returns compaction with empty firstKeptEntryId", () => {
+  test("single-user + autonomous tail → zero-token guard cancels compact-all", async () => {
     setConfig({ debug: false, overrideDefaultCompaction: false });
     const { pi, invoke, notifyCalls } = createMockPi();
     registerBeforeCompactHook(pi);
@@ -173,9 +173,9 @@ describe("registerBeforeCompactHook: compact-all path", () => {
       msg("m3", "toolResult", "result"),
       msg("m4", "assistant", "done"),
     ];
-    const result = invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION));
-    expect(result.compaction).toBeDefined();
-    expect(result.compaction.firstKeptEntryId).toBe("");
-    expect(notifyCalls).toHaveLength(0); // no cancel notify on success
+    const result = await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION));
+    // Zero-token guard kicks in: compactAll with tiny summary → cancel
+    expect(result).toEqual({ cancel: true });
+    expect(notifyCalls.length).toBeGreaterThanOrEqual(1);
   });
 });

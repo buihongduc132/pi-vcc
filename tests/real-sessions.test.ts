@@ -14,7 +14,7 @@ describe("real session integration", () => {
     for (const sample of samples) {
       const before = await readSourceStat(sample);
       const loaded = loadSessionMessages(sample.copy);
-      const report = buildCompactReport({ messages: loaded.messages });
+      const report = await buildCompactReport({ messages: loaded.messages });
       const after = await readSourceStat(sample);
 
       expect(loaded.messageCount).toBeGreaterThan(0);

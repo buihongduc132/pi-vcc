@@ -8,8 +8,8 @@ import {
 } from "./fixtures";
 
 describe("buildCompactReport", () => {
-  it("includes before and after compact metrics", () => {
-    const report = buildCompactReport({
+  it("includes before and after compact metrics", async () => {
+    const report = await buildCompactReport({
       messages: [
         userMsg("Fix login bug in auth.ts"),
         assistantWithToolCall("Read", { path: "auth.ts" }),
@@ -28,8 +28,8 @@ describe("buildCompactReport", () => {
     expect(report.compression.ratio).toBeGreaterThan(0);
   });
 
-  it("marks recall probe coverage for goal and file queries", () => {
-    const report = buildCompactReport({
+  it("marks recall probe coverage for goal and file queries", async () => {
+    const report = await buildCompactReport({
       messages: [
         userMsg("Fix login bug in auth.ts"),
         assistantWithToolCall("Read", { path: "auth.ts" }),

@@ -5,7 +5,7 @@ import { join } from "path";
 import { loadAllMessages } from "../src/core/load-messages";
 
 describe("loadAllMessages", () => {
-  it("loads all message entries when no lineage filter is provided", () => {
+  it("loads all message entries when no lineage filter is provided", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pi-vcc-load-all-"));
     const file = join(dir, "session.jsonl");
     try {
@@ -18,7 +18,7 @@ describe("loadAllMessages", () => {
       ];
       writeFileSync(file, lines.join("\n") + "\n", "utf8");
 
-      const loaded = loadAllMessages(file, false);
+      const loaded = await loadAllMessages(file, false);
       expect(loaded.rendered).toHaveLength(3);
       expect(loaded.rawMessages).toHaveLength(3);
       expect(loaded.entryIds).toEqual(["m1", "m2", "m3"]);
@@ -28,7 +28,7 @@ describe("loadAllMessages", () => {
     }
   });
 
-  it("filters messages by allowed lineage entry IDs and preserves original message index", () => {
+  it("filters messages by allowed lineage entry IDs and preserves original message index", async () => {
     const dir = mkdtempSync(join(tmpdir(), "pi-vcc-load-filter-"));
     const file = join(dir, "session.jsonl");
     try {
@@ -39,7 +39,7 @@ describe("loadAllMessages", () => {
       ];
       writeFileSync(file, lines.join("\n") + "\n", "utf8");
 
-      const loaded = loadAllMessages(file, false, new Set(["m2"]));
+      const loaded = await loadAllMessages(file, false, new Set(["m2"]));
       expect(loaded.rendered).toHaveLength(1);
       expect(loaded.rawMessages).toHaveLength(1);
       expect(loaded.entryIds).toEqual(["m2"]);
