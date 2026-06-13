@@ -1,6 +1,7 @@
 import type { Message } from "@mariozechner/pi-ai";
 import type { RenderedEntry } from "./render-entries";
 import { textOf } from "./content";
+import { escapeRegExp, assertSafeComplexity } from "./regex-utils";
 
 interface BashExecutionMessage {
   role: "bashExecution";
@@ -18,15 +19,15 @@ export interface SearchHit extends RenderedEntry {
   matchCount?: number;
 }
 
-const escapeRegex = (s: string): string =>
-  s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/** Try to compile as regex; fall back to escaped literal. */
+/** Try to compile as regex; fall back to escaped literal.
+ *  Also validates regex complexity to prevent ReDoS.
+ *  If the regex has unsafe complexity, falls back to escaped literal. */
 const safeRegex = (pattern: string): RegExp => {
   try {
+    assertSafeComplexity(pattern);
     return new RegExp(pattern, "i");
   } catch {
-    return new RegExp(escapeRegex(pattern), "i");
+    return new RegExp(escapeRegExp(pattern), "i");
   }
 };
 
@@ -34,15 +35,15 @@ const safeRegex = (pattern: string): RegExp => {
 const looksLikeRegex = (query: string): boolean =>
   /[|*+?{}()[\]\\^$.]/.test(query);
 
-/** Build a regex for snippet highlighting — matches first available term. */
+/** Build a regex for snippet highlighting — matches first available term.
+ *  Each term is complexity-checked; unsafe terms are escaped. */
 const snippetRegex = (terms: string[]): RegExp => {
   const alts = terms.map((t) => {
     try {
-      // Validate that it's a valid regex
-      new RegExp(t, "i");
+      assertSafeComplexity(t);
       return t;
     } catch {
-      return escapeRegex(t);
+      return escapeRegExp(t);
     }
   });
   return new RegExp(alts.join("|"), "i");

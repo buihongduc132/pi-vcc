@@ -1,4 +1,5 @@
 import type { NormalizedBlock } from "../types";
+import { assertSafeComplexity } from "../core/regex-utils";
 
 export interface ReferenceExtract {
   urls: string[];
@@ -77,11 +78,13 @@ const collectTextFromBlocks = (blocks: NormalizedBlock[]): string[] => {
   return texts;
 };
 
-/** Compile an array of regex strings into RegExp objects (global). */
+/** Compile an array of regex strings into RegExp objects (global).
+ *  Each pattern is checked for ReDoS complexity before compilation.
+ *  Patterns that fail complexity check or regex syntax are silently skipped. */
 const compilePatterns = (patterns: string[] | undefined): RegExp[] => {
   if (!patterns || patterns.length === 0) return [];
   return patterns.map((p) => {
-    try { return new RegExp(p, "g"); } catch { return null; }
+    try { assertSafeComplexity(p); return new RegExp(p, "g"); } catch { return null; }
   }).filter((r): r is RegExp => r !== null);
 };
 

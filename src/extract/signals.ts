@@ -1,5 +1,6 @@
 import type { NormalizedBlock } from "../types";
 import { clip, nonEmptyLines } from "../core/content";
+import { escapeRegExp } from "../core/regex-utils";
 
 export interface SignalsOptions {
   enabled?: boolean;
@@ -27,7 +28,8 @@ const buildStatusPattern = (line: string, extraKeywords?: string[]): boolean => 
     ? [...DEFAULT_STATUS_KEYWORDS, ...extraKeywords]
     : DEFAULT_STATUS_KEYWORDS;
   for (const kw of keywords) {
-    const re = new RegExp(`(?:^|[.!?;:\\-—])\\s*${kw}\\b`, "i");
+    const escapedKw = escapeRegExp(kw);
+    const re = new RegExp(`(?:^|[.!?;:\\-—])\\s*${escapedKw}\\b`, "i");
     if (re.test(line)) return true;
   }
   return false;
