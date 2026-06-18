@@ -1,0 +1,31 @@
+# Development files
+tsconfig.json
+vitest.config.ts
+.vscode/
+.git/
+.gitignore
+
+# Documentation / internal planning
+PLAN.md
+SUMMARY.md
+plan/
+plans/
+flow/
+
+# Build artifacts
+*.log
+npm-debug.log*
+.DS_Store
+
+# Tests (never ship fixtures to npm)
+test/
+tests/
+*.test.ts
+*.spec.ts
+
+# Local agent / tooling artifacts
+.pi
+.claude
+.gitnexus
+.github
+.fusion

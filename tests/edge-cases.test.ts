@@ -28,10 +28,10 @@ describe("references edge cases", () => {
 
   it("handles URL with port number", () => {
     const blocks: NormalizedBlock[] = [
-      { kind: "user", text: "Service at http://100.114.135.99:4747" },
+      { kind: "user", text: "Service at http://example.com:4747" },
     ];
     const r = extractReferences(blocks);
-    expect(r.urls[0]).toBe("http://100.114.135.99:4747");
+    expect(r.urls[0]).toBe("http://example.com:4747");
   });
 
   it("handles URL with fragment", () => {

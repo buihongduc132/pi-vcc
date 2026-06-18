@@ -30,10 +30,10 @@ describe("extractReferences", () => {
 
   it("extracts IP:port URL", () => {
     const blocks: NormalizedBlock[] = [
-      { kind: "user", text: "The server is at http://100.114.135.99:4747" },
+      { kind: "user", text: "The server is at http://example.com:4747" },
     ];
     const refs = extractReferences(blocks);
-    expect(refs.urls).toContain("http://100.114.135.99:4747");
+    expect(refs.urls).toContain("http://example.com:4747");
   });
 
   it("strips trailing punctuation from URLs", () => {
