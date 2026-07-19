@@ -63,6 +63,13 @@ export interface PiVccSettings {
   overrideDefaultCompaction: boolean;
   /** Write debug snapshot to /tmp/pi-vcc-debug.json on each compaction. */
   debug: boolean;
+  /**
+   * Kill-switch: when true, preserves the legacy cancel-on-no-user-message behavior
+   * ({cancel: true} blocks compaction). When false (default after fix), pi-vcc defers
+   * to pi-core default compaction (bare `return;`) for the no_user_message /
+   * empty-summary / zero-token guard paths. Allows rollback without redeploy.
+   */
+  legacyCancelBehavior: boolean;
   /** Fine-grained extraction configuration. All patterns are ADDITIVE — built-ins are never removed. */
   extraction: ExtractionConfig;
 }
@@ -91,6 +98,7 @@ const DEFAULT_EXTRACTION: ExtractionConfig = {
 export const DEFAULT_SETTINGS: PiVccSettings = {
   overrideDefaultCompaction: false,
   debug: false,
+  legacyCancelBehavior: false,
   extraction: DEFAULT_EXTRACTION,
 };
 

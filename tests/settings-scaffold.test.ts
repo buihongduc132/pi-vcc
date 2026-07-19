@@ -52,7 +52,7 @@ describe("scaffoldSettingsAsync", () => {
   });
 
   it("does NOT clobber existing valid config (only fills missing keys)", async () => {
-    const existing = { overrideDefaultCompaction: true, debug: false, extraction: { references: { enabled: true, extraUrlPatterns: [], extraGithubRefPatterns: [], extraVersionPatterns: [], extraBranchPatterns: [] }, keySignals: { enabled: true, extraConstraintPatterns: [], extraDecisionPatterns: [], extraStatusPatterns: [] }, goals: { enabled: true, extraTaskVerbs: [], extraScopeChangeWords: [] } } };
+    const existing = { overrideDefaultCompaction: true, debug: false, legacyCancelBehavior: false, extraction: { references: { enabled: true, extraUrlPatterns: [], extraGithubRefPatterns: [], extraVersionPatterns: [], extraBranchPatterns: [] }, keySignals: { enabled: true, extraConstraintPatterns: [], extraDecisionPatterns: [], extraStatusPatterns: [] }, goals: { enabled: true, extraTaskVerbs: [], extraScopeChangeWords: [] } } };
     mockReadFile.mockResolvedValue(JSON.stringify(existing));
     mockWriteFile.mockResolvedValue(undefined);
 

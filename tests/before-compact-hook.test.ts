@@ -6,7 +6,9 @@ import { registerBeforeCompactHook, PI_VCC_COMPACT_INSTRUCTION } from "../src/ho
 
 let tmpDir: string;
 let CONFIG_PATH: string;
-const DEBUG_PATH = "/tmp/pi-vcc-debug.json";
+// LD10: debug snapshot path is now pid-suffixed to prevent concurrent
+// sessions from clobbering each other's writes.
+const DEBUG_PATH = `/tmp/pi-vcc-debug-${process.pid}.json`;
 
 beforeAll(() => {
   tmpDir = mkdtempSync(join(tmpdir(), "pi-vcc-test-"));
@@ -88,14 +90,22 @@ describe("registerBeforeCompactHook: cancel paths", () => {
     expect(notifyCalls[0].msg).toContain("Too few messages");
   });
 
-  test("/pi-vcc with no user message cancels with no_user_message reason", async () => {
+  test("/pi-vcc with no user message defers to pi-core (LD3/LD8/LD16)", async () => {
+    // GREEN update: no_user_message is a LIE path (LD3). Was {cancel:true}
+    // (blocked fallback). Now defers via bare `return;` so pi-core actually
+    // runs. For explicit /pi-vcc, LD16 requires an error-level toast so the
+    // user knows vcc failed.
     setConfig({ debug: false, overrideDefaultCompaction: false });
     const { pi, invoke, notifyCalls } = createMockPi();
     registerBeforeCompactHook(pi);
 
     const entries = [msg("m1", "assistant"), msg("m2", "assistant"), msg("m3", "assistant")];
-    expect(await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
-    expect(notifyCalls[0].msg).toContain("no user message");
+    expect(await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toBeUndefined();
+    expect(notifyCalls.length).toBeGreaterThanOrEqual(1);
+    // LD16: explicit /pi-vcc failure surfaces an error toast.
+    const errorCalls = notifyCalls.filter((c) => c.level === "error");
+    expect(errorCalls.length).toBeGreaterThanOrEqual(1);
+    expect(errorCalls[0].msg).toContain("pi-vcc: failed");
   });
 
   test("/compact with override=true cancels and notifies (NEW: was silent before)", async () => {
@@ -120,6 +130,8 @@ describe("registerBeforeCompactHook: cancel paths", () => {
   });
 
   test("debug:true writes metrics-only snapshot with no content leakage", async () => {
+    // GREEN update: no_user_message now defers (LD3). Snapshot field renamed
+    // `cancelled:true` → `deferred:true`. Path is pid-suffixed (LD10).
     setConfig({ debug: true, overrideDefaultCompaction: false });
     const { pi, invoke } = createMockPi();
     registerBeforeCompactHook(pi);
@@ -129,11 +141,12 @@ describe("registerBeforeCompactHook: cancel paths", () => {
       msg("m2", "assistant", "sensitive response"),
       msg("m3", "assistant", "more text"),
     ];
-    expect(await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toEqual({ cancel: true });
+    expect(await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION))).toBeUndefined();
 
     expect(existsSync(DEBUG_PATH)).toBe(true);
     const snapshot = JSON.parse(readFileSync(DEBUG_PATH, "utf-8"));
-    expect(snapshot.cancelled).toBe(true);
+    expect(snapshot.deferred).toBe(true);
+    expect(snapshot.cancelled).toBeUndefined();
     expect(snapshot.reason).toBe("no_user_message");
     expect(snapshot.isPiVcc).toBe(true);
 
@@ -162,7 +175,10 @@ describe("registerBeforeCompactHook: compact-all path", () => {
     if (existsSync(DEBUG_PATH)) unlinkSync(DEBUG_PATH);
   });
 
-  test("single-user + autonomous tail → zero-token guard cancels compact-all", async () => {
+  test("single-user + autonomous tail → zero-token guard defers compact-all (LD3)", async () => {
+    // GREEN update: zero-token-guard is a LIE path (LD3, asymmetric — fires
+    // only when compactAll=true). Was {cancel:true} (blocked fallback). Now
+    // defers via bare `return;` so pi-core actually runs.
     setConfig({ debug: false, overrideDefaultCompaction: false });
     const { pi, invoke, notifyCalls } = createMockPi();
     registerBeforeCompactHook(pi);
@@ -174,8 +190,9 @@ describe("registerBeforeCompactHook: compact-all path", () => {
       msg("m4", "assistant", "done"),
     ];
     const result = await invoke(makeEvent(entries, PI_VCC_COMPACT_INSTRUCTION));
-    // Zero-token guard kicks in: compactAll with tiny summary → cancel
-    expect(result).toEqual({ cancel: true });
+    // Zero-token guard kicks in: compactAll with tiny summary → defer to pi-core
+    expect(result).toBeUndefined();
+    // LD16: explicit /pi-vcc surfaces error toast.
     expect(notifyCalls.length).toBeGreaterThanOrEqual(1);
   });
 });
