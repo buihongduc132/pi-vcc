@@ -1,10 +1,38 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { join } from "path";
+import { mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
 import {
   collapseSkillLines,
   collapseSkillText,
 } from "../src/core/skill-collapse";
 import { compile } from "../src/core/summarize";
 import { assistantWithToolCall, userMsg } from "./fixtures";
+
+// `compile()` (summarize.ts line 140) calls loadSettings(), which resolves the
+// config path from process.env.PI_VCC_CONFIG_PATH (or falls back to the user's
+// real ~/.pi/agent/pi-vcc-config.json). Without pinning the path, File/Files
+// And Changes assertions could read a developer's real config file and become
+// non-deterministic. Each compile describe block below points that env var at
+// a non-existent temp path so loadSettings() hits its ENOENT catch branch and
+// returns DEFAULT_SETTINGS deterministically.
+const ORIGINAL_ENV = process.env.PI_VCC_CONFIG_PATH;
+let pinnedConfigDir: string | undefined;
+const pinSettings = () => {
+  pinnedConfigDir = mkdtempSync(join(tmpdir(), "pi-vcc-compile-cfg-"));
+  process.env.PI_VCC_CONFIG_PATH = join(pinnedConfigDir, "does-not-exist.json");
+};
+const restoreSettings = () => {
+  if (ORIGINAL_ENV === undefined) {
+    delete process.env.PI_VCC_CONFIG_PATH;
+  } else {
+    process.env.PI_VCC_CONFIG_PATH = ORIGINAL_ENV;
+  }
+  if (pinnedConfigDir) {
+    rmSync(pinnedConfigDir, { recursive: true, force: true });
+    pinnedConfigDir = undefined;
+  }
+};
 
 // ═══════════════════════════════════════════════════════════════
 // Branch coverage for src/core/skill-collapse.ts
@@ -124,6 +152,9 @@ describe("collapseSkillText — branch coverage", () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe("compile — Files And Changes merge (mergeFileLines branch coverage)", () => {
+  beforeEach(pinSettings);
+  afterEach(restoreSettings);
+
   it("merges Modified file lists from previous and fresh (line 52 + happy path)", async () => {
     // Covers: summarize.ts line 52 (return mergeFileLines(prev, fresh)),
     // the parse loop (73-87), cap() <= limit branch (line 94),
@@ -265,6 +296,9 @@ describe("compile — Files And Changes merge (mergeFileLines branch coverage)",
 });
 
 describe("compile — additional summarize.ts branch coverage (Commits/Created/Read/empty)", () => {
+  beforeEach(pinSettings);
+  afterEach(restoreSettings);
+
   it("merges Commits section using the Commits CAP=8 ternary (line 60 middle branch)", async () => {
     // Covers: mergeHeaderSection line 60 — `header === "Commits" ? 8 : 15`.
     // BOTH prev and fresh must contribute non-empty Commits sections so the
@@ -384,6 +418,9 @@ describe("compile — additional summarize.ts branch coverage (Commits/Created/R
 });
 
 describe("compile — Session Goal / brief merge branch coverage", () => {
+  beforeEach(pinSettings);
+  afterEach(restoreSettings);
+
   it("uses fresh brief when previous summary had no brief section (line 107 !prev branch)", async () => {
     // Covers: mergeBriefTranscript `if (!prev) return fresh;` — previous has
     // headers but no `\n\n---\n\n` separator, so prevBrief is "".

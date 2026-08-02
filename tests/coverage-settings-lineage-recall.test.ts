@@ -33,7 +33,14 @@ describe("settings.loadSettings / readJson catch fallback (line 110)", () => {
   });
 
   afterEach(() => {
-    process.env.PI_VCC_CONFIG_PATH = ORIGINAL_ENV;
+    // When ORIGINAL_ENV was undefined, restoring via assignment would set the
+    // var to the STRING "undefined" (truthy) and leak state into later tests.
+    // Delete instead so the env reverts to genuinely unset.
+    if (ORIGINAL_ENV === undefined) {
+      delete process.env.PI_VCC_CONFIG_PATH;
+    } else {
+      process.env.PI_VCC_CONFIG_PATH = ORIGINAL_ENV;
+    }
     rmSync(tmp, { recursive: true, force: true });
   });
 
@@ -98,7 +105,13 @@ describe("settings.scaffoldSettings() sync (lines 158-179)", () => {
   });
 
   afterEach(() => {
-    process.env.PI_VCC_CONFIG_PATH = ORIGINAL_ENV;
+    // Same undefined-leak guard as the outer describe: delete rather than
+    // assigning the literal "undefined" string when ORIGINAL_ENV is unset.
+    if (ORIGINAL_ENV === undefined) {
+      delete process.env.PI_VCC_CONFIG_PATH;
+    } else {
+      process.env.PI_VCC_CONFIG_PATH = ORIGINAL_ENV;
+    }
     vi.doUnmock("fs");
     vi.resetModules();
   });
@@ -131,10 +144,26 @@ describe("settings.scaffoldSettings() sync (lines 158-179)", () => {
     expect(mockWriteFileSync).toHaveBeenCalledTimes(1);
   });
 
-  it("returns early without clobbering when file has invalid JSON (line 169 true branch)", () => {
-    // dir exists, file exists
+  it("returns early without clobbering when file has invalid JSON (line 180 catch block, JSON.parse throws)", () => {
+    // dir exists, file exists. "not valid json {{{" makes JSON.parse throw,
+    // so execution never reaches the line 169 object guard — it falls through
+    // to the outer try/catch (line 180) which swallows the parse error.
     mockExistsSync.mockReturnValueOnce(true).mockReturnValueOnce(true);
     mockReadFileSync.mockReturnValue("not valid json {{{");
+
+    scaffoldSettings();
+
+    expect(mockWriteFileSync).not.toHaveBeenCalled();
+  });
+
+  it("returns early without clobbering when parsed JSON is a non-object value (line 169 true branch, typeof check)", () => {
+    // Covers the `typeof parsed !== "object"` right operand on line 169
+    // INDEPENDENTLY of the `!parsed` operand: a valid JSON string parses to a
+    // JS string (typeof === "string"), which is truthy but not an object, so
+    // the guard returns without clobbering. (An array would NOT hit this —
+    // typeof [] === "object" — so a primitive string is required here.)
+    mockExistsSync.mockReturnValueOnce(true).mockReturnValueOnce(true);
+    mockReadFileSync.mockReturnValue(JSON.stringify("just-a-string"));
 
     scaffoldSettings();
 
