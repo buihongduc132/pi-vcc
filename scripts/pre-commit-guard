@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+# pre-commit-guard 2026-08-26
+#
+# Guardrails for noco-mesh commits.
+# Rules:
+#   R-02 no-env-files (FAIL)
+#   R-03 no-binary-secrets (WARN)
+#   R-04 bd-epic-linked (WARN)
+#   R-05 ts-syntax-gate (FAIL)
+#   R-06 react-key-gate (FAIL)
+
+set -euo pipefail
+
+MODE="normal"
+REPLAY_COMMIT=""
+
+if [[ "${1:-}" == "--replay" ]]; then
+  MODE="replay"
+  REPLAY_COMMIT="${2:-}"
+  if [[ -z "${REPLAY_COMMIT}" ]]; then
+    echo "usage: .git/hooks/pre-commit --replay <commit>" >&2
+    exit 2
+  fi
+fi
+
+get_changed_files() {
+  if [[ "${MODE}" == "replay" ]]; then
+    git diff-tree --name-only -r "${REPLAY_COMMIT}"
+  else
+    git diff --cached --name-only
+  fi
+}
+
+get_numstat() {
+  if [[ "${MODE}" == "replay" ]]; then
+    git diff-tree --numstat -r "${REPLAY_COMMIT}"
+  else
+    git diff --cached --numstat
+  fi
+}
+
+get_file_content() {
+  local path="$1"
+  if [[ "${MODE}" == "replay" ]]; then
+    git show "${REPLAY_COMMIT}:${path}" 2>/dev/null || true
+  else
+    git show ":${path}" 2>/dev/null || true
+  fi
+}
+
+fail=0
+warn=0
+
+announce_replay() {
+  if [[ "${MODE}" == "replay" ]]; then
+    local parent
+    parent="$(git rev-parse "${REPLAY_COMMIT}^" 2>/dev/null || true)"
+    echo "[pre-commit-guard --replay] Replaying rules against commit: ${REPLAY_COMMIT} (parent: ${parent})"
+    echo "────────────────────────────────────────────────────────────"
+  fi
+}
+
+announce_replay
+
+# R-02 no-env-files (FAIL)
+env_hits=()
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+  if [[ "${file}" =~ (^|/)\.env($|[^/]*$) ]]; then
+    env_hits+=("${file}")
+  fi
+done < <(get_changed_files)
+
+if [[ "${#env_hits[@]}" -gt 0 ]]; then
+  echo "R-02 no-env-files: .env file(s) are staged and will not be committed."
+  for f in "${env_hits[@]}"; do
+    echo "  → Unstage:  git reset HEAD -- ${f}"
+  done
+  fail=1
+else
+  [[ "${MODE}" == "replay" ]] && echo "  ✓ R-02 no-env-files: no .env files in ${REPLAY_COMMIT}"
+fi
+
+# R-03 no-binary-secrets (WARN)
+bin_hits=()
+while IFS=$'\t' read -r add del file; do
+  [[ -z "${file}" ]] && continue
+  if [[ "${add}" == "-" && "${del}" == "-" ]]; then
+    bin_hits+=("${file}")
+  fi
+done < <(get_numstat)
+
+if [[ "${#bin_hits[@]}" -gt 0 ]]; then
+  echo "WARN  R-03 no-binary-secrets: binary files staged"
+  for f in "${bin_hits[@]}"; do
+    echo "  → ${f}"
+  done
+  warn=1
+else
+  [[ "${MODE}" == "replay" ]] && echo "  ✓ R-03 no-binary-secrets: no binary files in ${REPLAY_COMMIT}"
+fi
+
+# R-04 bd-epic-linked (WARN)
+beads_hits=()
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+  if [[ "${file}" == .beads/* || "${file}" == .beads-specs/* ]]; then
+    content="$(get_file_content "${file}")"
+    if ! echo "${content}" | rg -q -i "epic(_id)?\\s*:"; then
+      beads_hits+=("${file}")
+    fi
+  fi
+done < <(get_changed_files)
+
+if [[ "${#beads_hits[@]}" -gt 0 ]]; then
+  echo "WARN  R-04 bd-epic-linked: bead(s) missing epic linkage"
+  for f in "${beads_hits[@]}"; do
+    echo "  → ${f}"
+  done
+  warn=1
+else
+  [[ "${MODE}" == "replay" ]] && echo "  ✓ R-04 bd-epic-linked: bead files have epic linkage in ${REPLAY_COMMIT}"
+fi
+
+# R-05 typescript-syntax-gate (FAIL)
+# Collect staged .ts/.tsx/.cts/.mts files. If any, run full-project tsc --noEmit
+# and filter output to only errors in staged files. This uses tsc's full project
+# context (resolves imports, types, etc.) but only fails if staged files have errors.
+ts_hits=()
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+  if [[ "${file}" =~ \.(ts|tsx|cts|mts)$ ]]; then
+    ts_hits+=("${file}")
+  fi
+done < <(get_changed_files)
+
+if [[ "${#ts_hits[@]}" -gt 0 ]]; then
+  # Run full-project typecheck. Disable errexit around the call: tsc exits
+  # non-zero if ANY file has errors, but we only care about staged files.
+  set +e
+  tsc_output="$(npx tsc --noEmit 2>&1)"
+  tsc_exit=$?
+  set -e
+
+  if [[ "${tsc_exit}" -ne 0 ]]; then
+    # Filter tsc output to only errors in staged files.
+    # Use literal substring match (NOT grep regex) so regex metacharacters in
+    # file paths (e.g. '[', ']', '.') are matched as literal characters. We
+    # compare the leading ${#staged_file} chars of each tsc line to the staged
+    # path and require the very next char to be '(' (tsc format: path(l,c): ...).
+    ts_errors=""
+    while IFS= read -r line; do
+      for staged_file in "${ts_hits[@]}"; do
+        plen=${#staged_file}
+        if [[ "${line:0:${plen}}" == "${staged_file}" && "${line:${plen}:1}" == "(" ]]; then
+          ts_errors+="${line}"$'\n'
+          break
+        fi
+      done
+    done <<< "${tsc_output}"
+
+    if [[ -n "${ts_errors}" ]]; then
+      echo "R-05 ts-syntax-gate: TypeScript errors in staged files."
+      echo "${ts_errors}"
+      fail=1
+    else
+      [[ "${MODE}" == "replay" ]] && echo "  ✓ R-05 ts-syntax-gate: no errors in staged TS files in ${REPLAY_COMMIT}"
+    fi
+  else
+    [[ "${MODE}" == "replay" ]] && echo "  ✓ R-05 ts-syntax-gate: no errors in staged TS files in ${REPLAY_COMMIT}"
+  fi
+else
+  [[ "${MODE}" == "replay" ]] && echo "  ✓ R-05 ts-syntax-gate: no TS files staged in ${REPLAY_COMMIT}"
+fi
+
+# R-06 react-key-gate (FAIL)
+# If any staged .tsx file, run the AST-based React key checker. Fail on findings
+# (single-field .id keys in goal-list maps that risk duplicate-key collisions).
+tsx_hits_r06=()
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+  if [[ "${file}" == src/*.tsx && "${file}" != *.test.tsx && "${file}" != *.spec.tsx ]]; then
+    tsx_hits_r06+=("${file}")
+  fi
+done < <(get_changed_files)
+
+if [[ "${#tsx_hits_r06[@]}" -gt 0 ]]; then
+  set +e
+  rk_output="$(node scripts/check-react-keys.mjs 2>&1)"
+  rk_exit=$?
+  set -e
+  if [[ "${rk_exit}" -ne 0 ]]; then
+    echo "R-06 react-key-gate: risky React key pattern(s) found."
+    echo "${rk_output}"
+    fail=1
+  else
+    [[ "${MODE}" == "replay" ]] && echo "  ✓ R-06 react-key-gate: no risky key patterns in ${REPLAY_COMMIT}"
+  fi
+else
+  [[ "${MODE}" == "replay" ]] && echo "  ✓ R-06 react-key-gate: no src/*.tsx staged in ${REPLAY_COMMIT}"
+fi
+
+if [[ "${MODE}" == "replay" ]]; then
+  echo "────────────────────────────────────────────────────────────"
+  if [[ "${fail}" -gt 0 || "${warn}" -gt 0 ]]; then
+    echo "[pre-commit-guard --replay] Result: one or more rules failed/warned for ${REPLAY_COMMIT}"
+    exit 1
+  fi
+  echo "[pre-commit-guard --replay] Result: all rules passed for ${REPLAY_COMMIT}"
+  exit 0
+fi
+
+if [[ "${fail}" -gt 0 ]]; then
+  exit 1
+fi
+
+exit 0
